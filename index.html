@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Manager</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      max-width: 680px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: fadeInDown 0.6s ease-out;
+    }
+
+    .header h1 {
+      color: white;
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 16px;
+    }
+
+    .loading {
+      text-align: center;
+      color: white;
+      font-size: 18px;
+      padding: 40px;
+    }
+
+    .loading-spinner {
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .password-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .password-card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      animation: fadeInUp 0.6s ease-out;
+      animation-fill-mode: both;
+    }
+
+    .password-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .logo-container {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      background: #f8f9fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .logo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .logo-placeholder {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .app-name {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1a1a1a;
+      flex: 1;
+    }
+
+    .credential-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .credential-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .credential-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      min-width: 80px;
+    }
+
+    .credential-value {
+      flex: 1;
+      background: #f8f9fa;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #1a1a1a;
+      font-family: 'Courier New', monospace;
+      word-break: break-all;
+    }
+
+    .password-hidden {
+      letter-spacing: 4px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .btn-copy {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-copy:hover {
+      background: #5568d3;
+      transform: translateY(-1px);
+    }
+
+    .btn-copy:active {
+      transform: translateY(0);
+    }
+
+    .btn-toggle {
+      background: #e9ecef;
+      color: #495057;
+    }
+
+    .btn-toggle:hover {
+      background: #dee2e6;
+    }
+
+    .btn-copied {
+      background: #28a745 !important;
+      pointer-events: none;
+    }
+
+    .icon {
+      width: 16px;
+      height: 16px;
+    }
+
+    .error-message {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      color: #dc3545;
+      font-size: 16px;
+    }
+
+    .error-details {
+      margin-top: 12px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #666;
+      text-align: left;
+    }
+
+    .retry-button {
+      margin-top: 16px;
+      padding: 12px 24px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .retry-button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 24px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    .footer-text {
+      color: white;
+      font-size: 14px;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .footer-brand {
+      color: white;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .footer-brand span {
+      background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .header h1 {
+        font-size: 24px;
+      }
+
+      .password-card {
+        padding: 16px;
+      }
+
+      .credential-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .credential-label {
+        min-width: auto;
+      }
+
+      .btn-group {
+        width: 100%;
+      }
+
+      .btn {
+        flex: 1;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 id="appTitle">🔐 Password Manager</h1>
+      <p id="appSubtitle">Klik tombol untuk copy username atau password</p>
+    </div>
+
+    <div id="content">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        ⏳ Memuat data...
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-text" id="footerText">Powered by</div>
+      <div class="footer-brand">
+        <span id="footerBrand">CA Digital BIkalbar</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Config -->
+  <script src="config.js"></script>
+
+  <!-- Main App Script -->
+  <script>
+    // State management
+    let passwordData = [];
+
+    // Initialize app
+    document.addEventListener('DOMContentLoaded', () => {
+      loadConfig();
+      loadPasswordData();
+    });
+
+    // Load configuration
+    function loadConfig() {
+      if (typeof CONFIG !== 'undefined') {
+        document.getElementById('appTitle').textContent = `🔐 ${CONFIG.APP.TITLE}`;
+        document.getElementById('appSubtitle').textContent = CONFIG.APP.SUBTITLE;
+        document.getElementById('footerText').textContent = CONFIG.APP.FOOTER_TEXT;
+        document.getElementById('footerBrand').textContent = CONFIG.APP.FOOTER_BRAND;
+      }
+    }
+
+    // Load password data from API
+    async function loadPasswordData() {
+      try {
+        // Check if API URL is configured
+        if (!CONFIG.API_URL || CONFIG.API_URL === 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
+          throw new Error('API URL belum dikonfigurasi. Silakan edit file config.js dan masukkan URL Web App Anda.');
+        }
+
+        const apiUrl = getApiUrl(CONFIG.ACTIONS.GET_PASSWORDS);
+        const response = await fetchWithRetry(apiUrl);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+          passwordData = result.data;
+          displayPasswords(passwordData);
+        } else {
+          throw new Error(result.message || 'Gagal mengambil data');
+        }
+
+      } catch (error) {
+        displayError(error);
+      }
+    }
+
+    // Fetch with retry logic
+    async function fetchWithRetry(url, options = {}, attempt = 1) {
+      try {
+        const response = await fetch(url, {
+          ...options,
+          mode: 'cors',
+          credentials: 'omit'
+        });
+        return response;
+      } catch (error) {
+        if (attempt < CONFIG.RETRY.MAX_ATTEMPTS) {
+          await sleep(CONFIG.RETRY.DELAY_MS);
+          return fetchWithRetry(url, options, attempt + 1);
+        }
+        throw error;
+      }
+    }
+
+    // Sleep helper
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Display passwords
+    function displayPasswords(data) {
+      const content = document.getElementById('content');
+      
+      if (!data || data.length === 0) {
+        content.innerHTML = '<div class="error-message">Tidak ada data password ditemukan.</div>';
+        return;
+      }
+
+      let html = '<div class="password-list">';
+      
+      data.forEach((item, index) => {
+        const firstLetter = item.aplikasi.charAt(0).toUpperCase();
+        const hasLogo = item.logoURL && item.logoURL.trim() !== '';
+        
+        html += `
+          <div class="password-card" style="animation-delay: ${index * 0.1}s">
+            <div class="card-header">
+              <div class="logo-container">
+                ${hasLogo 
+                  ? `<img src="${escapeHtml(item.logoURL)}" alt="${escapeHtml(item.aplikasi)}" onerror="this.parentElement.innerHTML='<div class=\\'logo-placeholder\\'>${firstLetter}</div>'">`
+                  : `<div class="logo-placeholder">${firstLetter}</div>`
+                }
+              </div>
+              <div class="app-name">${escapeHtml(item.aplikasi)}</div>
+            </div>
+            
+            <div class="credential-row">
+              <div class="credential-label">Username</div>
+              <div class="credential-value">${escapeHtml(item.username)}</div>
+              <div class="btn-group">
+                <button class="btn btn-copy" onclick="copyToClipboard('${escapeHtml(item.username)}', this)">
+                  <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                  </svg>
+                  Copy
+                </button>
+              </div>
+            </div>
+            
+            <div class="credential-row">
+              <div class="credential-label">Password</div>
+              <div class="credential-value password-hidden" id="password-${index}">••••••••</div>
+              <div class="btn-group">
+                <button class="btn btn-toggle" onclick="togglePassword(${index}, '${escapeHtml(item.password)}')">
+                  <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                  </svg>
+                  Show
+                </button>
+                <button class="btn btn-copy" onclick="copyToClipboard('${escapeHtml(item.password)}', this)">
+                  <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                  </svg>
+                  Copy
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    // Display error
+    function displayError(error) {
+      const content = document.getElementById('content');
+      content.innerHTML = `
+        <div class="error-message">
+          ❌ ${error.message || 'Gagal memuat data'}
+          <div class="error-details">
+            <strong>Troubleshooting:</strong><br>
+            1. Pastikan API URL sudah dikonfigurasi di config.js<br>
+            2. Pastikan Web App sudah di-deploy dengan akses "Anyone"<br>
+            3. Cek console browser (F12) untuk error detail<br>
+            4. Pastikan SPREADSHEET_ID di Code.gs sudah benar
+          </div>
+          <button class="retry-button" onclick="loadPasswordData()">
+            🔄 Coba Lagi
+          </button>
+        </div>
+      `;
+      console.error('Error:', error);
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // Copy to clipboard
+    function copyToClipboard(text, button) {
+      // Decode HTML entities
+      const textarea = document.createElement('textarea');
+      textarea.innerHTML = text;
+      const decodedText = textarea.value;
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(decodedText).then(() => {
+        const originalText = button.innerHTML;
+        button.classList.add('btn-copied');
+        button.innerHTML = `
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Copied!
+        `;
+        
+        setTimeout(() => {
+          button.classList.remove('btn-copied');
+          button.innerHTML = originalText;
+        }, 2000);
+      }).catch(err => {
+        alert('Gagal copy: ' + err);
+      });
+    }
+
+    // Toggle password visibility
+    function togglePassword(index, password) {
+      const element = document.getElementById(`password-${index}`);
+      const button = event.target.closest('.btn-toggle');
+      
+      if (element.classList.contains('password-hidden')) {
+        // Show password
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = password;
+        element.textContent = textarea.value;
+        element.classList.remove('password-hidden');
+        button.innerHTML = `
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+          </svg>
+          Hide
+        `;
+      } else {
+        // Hide password
+        element.textContent = '••••••••';
+        element.classList.add('password-hidden');
+        button.innerHTML = `
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+          </svg>
+          Show
+        `;
+      }
+    }
+  </script>
+</body>
+</html>
